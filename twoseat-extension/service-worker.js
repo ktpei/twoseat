@@ -1,5 +1,19 @@
 importScripts('lib/protocol.js');
 
+// Inject content script into existing tabs on install/reload
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.tabs.query({}, (tabs) => {
+    for (const tab of tabs) {
+      if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['lib/protocol.js', 'content-script.js'],
+        }).catch(() => {});
+      }
+    }
+  });
+});
+
 let offscreenReady = false;
 let offscreenReadyResolvers = [];
 
