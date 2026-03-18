@@ -142,9 +142,14 @@ chrome.runtime.onMessage.addListener((message, sender) => {
 
     // === From Content Script ===
     case TWOSEAT.MSG.VIDEO_EVENT:
-      sendToOffscreen({
-        type: TWOSEAT.MSG.RTC_DATA_OUT,
-        data: message.control,
+      // Only forward events from the tracked video tab
+      chrome.storage.session.get('tabId', (data) => {
+        if (!data.tabId || !sender.tab || sender.tab.id === data.tabId) {
+          sendToOffscreen({
+            type: TWOSEAT.MSG.RTC_DATA_OUT,
+            data: message.control,
+          });
+        }
       });
       break;
 
