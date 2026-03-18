@@ -250,7 +250,13 @@ function handleVideoCommand(control) {
 
 function startSyncTicker() {
   if (syncInterval) return;
+  syncTickCount = 0;
   syncInterval = setInterval(() => {
+    syncTickCount++;
+    // Re-send URL info every 5 ticks (5 seconds) as fallback
+    if (syncTickCount % 5 === 0) {
+      sendUrlInfo();
+    }
     if (suppressCount === 0 && video && !video.paused && urlMatched) {
       sendVideoEvent(TWOSEAT.ACTION.SYNC);
     }
@@ -372,6 +378,8 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
+let lastAttachedVideo = null;
+
 function init() {
   video = findVideo();
   if (!video) {
@@ -379,24 +387,23 @@ function init() {
       video = findVideo();
       if (video) {
         observer.disconnect();
-        attachListeners();
-        showIndicator('TwoSeat: Watching', '#666', 2000);
-        try {
-          chrome.runtime.sendMessage({ type: TWOSEAT.MSG.VIDEO_FOUND, title: document.title });
-        } catch (e) {}
-        // If already connected, send nav event for this new video page
-        if (isConnected) {
-          sendNavEvent();
-          sendUrlInfo();
-        }
+        onVideoFound();
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
     console.log('[TwoSeat] No video found, watching for one...');
     return;
   }
+  onVideoFound();
+}
+
+function onVideoFound() {
+  // Only re-attach listeners if the video element changed
+  if (video !== lastAttachedVideo) {
+    attachListeners();
+    lastAttachedVideo = video;
+  }
   console.log('[TwoSeat] Video found');
-  attachListeners();
   showIndicator('TwoSeat: Watching', '#666', 2000);
   try {
     chrome.runtime.sendMessage({ type: TWOSEAT.MSG.VIDEO_FOUND, title: document.title });
@@ -406,5 +413,34 @@ function init() {
     sendUrlInfo();
   }
 }
+
+// --- SPA navigation detection ---
+let lastUrl = window.location.href;
+let syncTickCount = 0;
+
+function onNavigated() {
+  console.log('[TwoSeat] SPA navigation detected:', window.location.href);
+  // Re-detect video (may be the same element with different source)
+  video = findVideo();
+  if (video) {
+    onVideoFound();
+  }
+}
+
+// Poll for URL changes (catches all SPA navigations)
+setInterval(() => {
+  if (window.location.href !== lastUrl) {
+    lastUrl = window.location.href;
+    onNavigated();
+  }
+}, 1000);
+
+// YouTube-specific: fires immediately on SPA navigation
+document.addEventListener('yt-navigate-finish', () => {
+  if (window.location.href !== lastUrl) {
+    lastUrl = window.location.href;
+    onNavigated();
+  }
+});
 
 init();
