@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>TwoSeat</h1>
+  <div id="video-info"></div>
+  <div id="status"></div>
+
+  <!-- Disconnected -->
+  <div id="view-disconnected">
+    <button id="btn-create">Create Room</button>
+    <button id="btn-join">Join Room</button>
+  </div>
+
+  <!-- Offering (User A) -->
+  <div id="view-offering" hidden>
+    <div class="step">
+      <span class="step-label">Step 1 of 2</span>
+      <span class="step-desc">Send this code to your partner</span>
+    </div>
+    <textarea id="offer-text" readonly></textarea>
+    <button id="btn-copy-offer">Copy</button>
+    <hr>
+    <div class="step">
+      <span class="step-label">Step 2 of 2</span>
+      <span class="step-desc">Paste their response</span>
+    </div>
+    <textarea id="answer-input" placeholder="Paste response here..."></textarea>
+    <div id="answer-input-error" class="validation-error" hidden></div>
+    <button id="btn-set-answer">Connect</button>
+  </div>
+
+  <!-- Answering (User B) -->
+  <div id="view-answering" hidden>
+    <div class="step">
+      <span class="step-label">Step 1 of 2</span>
+      <span class="step-desc">Paste the code from your partner</span>
+    </div>
+    <textarea id="offer-input" placeholder="Paste room code here..."></textarea>
+    <div id="offer-input-error" class="validation-error" hidden></div>
+    <button id="btn-accept-offer">Generate Response</button>
+    <div id="answer-section" hidden>
+      <hr>
+      <div class="step">
+        <span class="step-label">Step 2 of 2</span>
+        <span class="step-desc">Send this back to your partner</span>
+      </div>
+      <textarea id="answer-text" readonly></textarea>
+      <button id="btn-copy-answer">Copy</button>
+    </div>
+  </div>
+
+  <!-- Connected -->
+  <div id="view-connected" hidden>
+    <p class="connected-msg">Connected — videos are syncing</p>
+    <button id="btn-disconnect">Disconnect</button>
+  </div>
+
+  <!-- Error with retry -->
+  <div id="view-error" hidden>
+    <p class="error-msg" id="error-text"></p>
+    <button id="btn-retry">Try Again</button>
+  </div>
+
+  <script src="../lib/protocol.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
