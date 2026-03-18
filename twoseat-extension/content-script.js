@@ -3,6 +3,10 @@ let suppressCount = 0;
 let syncInterval = null;
 let indicatorEl = null;
 let indicatorTimeout = null;
+let presenceDot = null;
+let followBanner = null;
+let urlMatched = true;
+let isConnected = false;
 
 // --- On-page sync indicator ---
 function createIndicator() {
@@ -12,7 +16,7 @@ function createIndicator() {
   indicatorEl.style.cssText = [
     'position: fixed',
     'bottom: 16px',
-    'right: 16px',
+    'right: 40px',
     'padding: 4px 10px',
     'border-radius: 12px',
     'font: 11px/1.4 -apple-system, BlinkMacSystemFont, sans-serif',
@@ -38,6 +42,98 @@ function showIndicator(text, bg, duration) {
   }
 }
 
+// --- Presence dot ---
+function showPresenceDot() {
+  if (presenceDot) return;
+  presenceDot = document.createElement('div');
+  presenceDot.id = 'twoseat-presence';
+  presenceDot.style.cssText = [
+    'position: fixed',
+    'bottom: 20px',
+    'right: 20px',
+    'width: 8px',
+    'height: 8px',
+    'border-radius: 50%',
+    'background: #22C55E',
+    'z-index: 2147483647',
+    'pointer-events: none',
+    'transition: background 0.3s',
+  ].join(';');
+  document.body.appendChild(presenceDot);
+}
+
+function hidePresenceDot() {
+  if (presenceDot) {
+    presenceDot.remove();
+    presenceDot = null;
+  }
+}
+
+function setPresenceColor(color) {
+  if (presenceDot) presenceDot.style.background = color;
+}
+
+// --- Follow banner ---
+function showFollowBanner(url, title) {
+  removeFollowBanner();
+  followBanner = document.createElement('div');
+  followBanner.id = 'twoseat-follow-banner';
+  followBanner.style.cssText = [
+    'position: fixed',
+    'top: 8px',
+    'left: 50%',
+    'transform: translateX(-50%)',
+    'background: rgba(0,0,0,0.9)',
+    'color: #fff',
+    'padding: 12px 16px',
+    'border-radius: 10px',
+    'font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif',
+    'z-index: 2147483647',
+    'max-width: 500px',
+    'box-shadow: 0 4px 20px rgba(0,0,0,0.3)',
+  ].join(';');
+
+  const label = document.createElement('div');
+  label.style.cssText = 'margin-bottom: 8px; color: #aaa; font-size: 11px;';
+  label.textContent = 'Partner went to:';
+
+  const titleEl = document.createElement('div');
+  titleEl.style.cssText = 'margin-bottom: 10px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+  titleEl.textContent = title;
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display: flex; gap: 8px;';
+
+  const followBtn = document.createElement('button');
+  followBtn.textContent = 'Follow';
+  followBtn.style.cssText = 'flex: 1; padding: 6px 12px; border: none; border-radius: 6px; background: #22C55E; color: #fff; font-size: 13px; cursor: pointer;';
+  followBtn.addEventListener('click', () => {
+    removeFollowBanner();
+    window.location.href = url;
+  });
+
+  const dismissBtn = document.createElement('button');
+  dismissBtn.textContent = 'Dismiss';
+  dismissBtn.style.cssText = 'flex: 1; padding: 6px 12px; border: 1px solid #555; border-radius: 6px; background: transparent; color: #fff; font-size: 13px; cursor: pointer;';
+  dismissBtn.addEventListener('click', () => {
+    removeFollowBanner();
+  });
+
+  btnRow.appendChild(followBtn);
+  btnRow.appendChild(dismissBtn);
+  followBanner.appendChild(label);
+  followBanner.appendChild(titleEl);
+  followBanner.appendChild(btnRow);
+  document.body.appendChild(followBanner);
+}
+
+function removeFollowBanner() {
+  if (followBanner) {
+    followBanner.remove();
+    followBanner = null;
+  }
+}
+
 // --- Video detection ---
 function findVideo() {
   const videos = Array.from(document.querySelectorAll('video'));
@@ -50,9 +146,12 @@ function findVideo() {
 }
 
 function sendVideoEvent(action, payload = {}) {
+  if (!urlMatched && [TWOSEAT.ACTION.PLAY, TWOSEAT.ACTION.PAUSE, TWOSEAT.ACTION.SEEK, TWOSEAT.ACTION.SYNC].includes(action)) {
+    return; // Don't send sync commands when on different videos
+  }
   const control = {
     action,
-    time: video.currentTime,
+    time: video ? video.currentTime : 0,
     sentAt: Date.now(),
     ...payload,
   };
@@ -84,8 +183,20 @@ function attachListeners() {
   });
 }
 
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
 function handleVideoCommand(control) {
   if (!video) return;
+
+  // Gate sync commands when on different videos
+  if (!urlMatched && [TWOSEAT.ACTION.PLAY, TWOSEAT.ACTION.PAUSE, TWOSEAT.ACTION.SEEK, TWOSEAT.ACTION.SYNC].includes(control.action)) {
+    return;
+  }
+
   suppressCount++;
 
   try {
@@ -94,16 +205,19 @@ function handleVideoCommand(control) {
 
     switch (control.action) {
       case TWOSEAT.ACTION.PLAY:
+        showIndicator('Partner played', '#666', 2000);
         video.currentTime = compensatedTime;
         video.play();
         break;
 
       case TWOSEAT.ACTION.PAUSE:
+        showIndicator('Partner paused', '#666', 2000);
         video.currentTime = control.time;
         video.pause();
         break;
 
       case TWOSEAT.ACTION.SEEK:
+        showIndicator('Partner seeked to ' + formatTime(control.time), '#666', 2000);
         video.currentTime = control.time;
         break;
 
@@ -137,7 +251,7 @@ function handleVideoCommand(control) {
 function startSyncTicker() {
   if (syncInterval) return;
   syncInterval = setInterval(() => {
-    if (suppressCount === 0 && video && !video.paused) {
+    if (suppressCount === 0 && video && !video.paused && urlMatched) {
       sendVideoEvent(TWOSEAT.ACTION.SYNC);
     }
   }, TWOSEAT.SYNC_INTERVAL_MS);
@@ -151,7 +265,6 @@ function stopSyncTicker() {
 }
 
 function getVideoUrl() {
-  // For YouTube, normalize to just the video ID
   const url = new URL(window.location.href);
   if (url.hostname.includes('youtube.com') && url.searchParams.has('v')) {
     return 'https://www.youtube.com/watch?v=' + url.searchParams.get('v');
@@ -166,10 +279,19 @@ function sendUrlInfo() {
   });
 }
 
+function sendNavEvent() {
+  if (!isConnected) return;
+  sendVideoEvent(TWOSEAT.ACTION.NAV, {
+    url: window.location.href,
+    pageTitle: document.title,
+  });
+}
+
 function handleUrlInfo(control) {
   const myUrl = getVideoUrl();
   const peerUrl = control.url;
   const match = myUrl === peerUrl;
+  urlMatched = match;
 
   try {
     chrome.runtime.sendMessage({
@@ -181,7 +303,24 @@ function handleUrlInfo(control) {
   } catch (e) {}
 
   if (!match) {
-    showIndicator('TwoSeat: Different video!', '#EAB308', 5000);
+    showIndicator('Sync paused — different video', '#EAB308', 4000);
+  } else {
+    showIndicator('Syncing', '#22C55E', 2000);
+  }
+}
+
+function handleNav(control) {
+  // Check if auto-follow is enabled
+  try {
+    chrome.storage.session.get('autoFollow', (data) => {
+      if (data.autoFollow) {
+        window.location.href = control.url;
+      } else {
+        showFollowBanner(control.url, control.pageTitle);
+      }
+    });
+  } catch (e) {
+    showFollowBanner(control.url, control.pageTitle);
   }
 }
 
@@ -190,29 +329,44 @@ chrome.runtime.onMessage.addListener((message) => {
     case TWOSEAT.MSG.VIDEO_COMMAND:
       if (message.control.action === TWOSEAT.ACTION.URL_INFO) {
         handleUrlInfo(message.control);
+      } else if (message.control.action === TWOSEAT.ACTION.NAV) {
+        handleNav(message.control);
       } else {
         handleVideoCommand(message.control);
       }
       break;
     case TWOSEAT.MSG.SYNC_TICK:
       if (message.enabled) {
+        isConnected = true;
         startSyncTicker();
         sendUrlInfo();
-        showIndicator('TwoSeat: Syncing', '#22C55E', 3000);
+        sendNavEvent();
+        showPresenceDot();
+        showIndicator('Partner is here', '#22C55E', 3000);
       } else {
         stopSyncTicker();
       }
       break;
     case TWOSEAT.MSG.DISCONNECT:
+      isConnected = false;
+      urlMatched = true;
       stopSyncTicker();
       if (video) video.playbackRate = 1.0;
-      showIndicator('TwoSeat: Disconnected', '#EF4444', 3000);
+      setPresenceColor('#888');
+      showIndicator('Partner disconnected', '#EF4444', 3000);
+      setTimeout(hidePresenceDot, 3000);
+      removeFollowBanner();
       break;
     case 'twoseat:status':
       if (message.status === 'syncing') {
-        showIndicator('TwoSeat: Syncing', '#22C55E', 3000);
+        isConnected = true;
+        showPresenceDot();
+        showIndicator('Syncing', '#22C55E', 3000);
       } else if (message.status === 'disconnected') {
-        showIndicator('TwoSeat: Disconnected', '#EF4444', 3000);
+        isConnected = false;
+        setPresenceColor('#888');
+        showIndicator('Partner disconnected', '#EF4444', 3000);
+        setTimeout(hidePresenceDot, 3000);
       }
       break;
   }
@@ -230,6 +384,11 @@ function init() {
         try {
           chrome.runtime.sendMessage({ type: TWOSEAT.MSG.VIDEO_FOUND, title: document.title });
         } catch (e) {}
+        // If already connected, send nav event for this new video page
+        if (isConnected) {
+          sendNavEvent();
+          sendUrlInfo();
+        }
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
@@ -242,6 +401,10 @@ function init() {
   try {
     chrome.runtime.sendMessage({ type: TWOSEAT.MSG.VIDEO_FOUND, title: document.title });
   } catch (e) {}
+  if (isConnected) {
+    sendNavEvent();
+    sendUrlInfo();
+  }
 }
 
 init();
