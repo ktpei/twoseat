@@ -55,7 +55,14 @@
 
   <!-- Connected -->
   <div id="view-connected" hidden>
-    <p class="connected-msg">Connected — videos are syncing</p>
+    <p class="connected-msg" id="connected-text">Connected — videos are syncing</p>
+    <div id="sync-paused" hidden>
+      <p class="sync-paused-msg" id="sync-paused-text"></p>
+    </div>
+    <label class="toggle-row">
+      <input type="checkbox" id="toggle-autofollow">
+      <span>Auto-follow partner</span>
+    </label>
     <button id="btn-disconnect">Disconnect</button>
   </div>
 

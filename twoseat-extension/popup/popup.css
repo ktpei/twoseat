@@ -161,3 +161,26 @@ p {
   padding: 12px 0;
   color: #2d7d46;
 }
+
+.sync-paused-msg {
+  text-align: center;
+  font-size: 11px;
+  color: #c44;
+  padding: 0 0 8px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.toggle-row input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}

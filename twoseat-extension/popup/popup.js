@@ -175,6 +175,15 @@ document.getElementById('btn-copy-answer').addEventListener('click', () => {
   }, 1500);
 });
 
+// Auto-follow toggle
+const autoFollowToggle = document.getElementById('toggle-autofollow');
+chrome.storage.session.get('autoFollow', (data) => {
+  autoFollowToggle.checked = !!data.autoFollow;
+});
+autoFollowToggle.addEventListener('change', () => {
+  chrome.storage.session.set({ autoFollow: autoFollowToggle.checked });
+});
+
 // Disconnect with confirmation
 let disconnectPending = false;
 let disconnectTimer = null;
@@ -217,7 +226,7 @@ document.getElementById('btn-retry').addEventListener('click', () => {
 // Poll storage for async results
 const pollInterval = setInterval(() => {
   chrome.storage.session.get(
-    ['pendingOffer', 'pendingAnswer', 'connectionState', 'connectionError'],
+    ['pendingOffer', 'pendingAnswer', 'connectionState', 'connectionError', 'urlMatch', 'peerTitle'],
     (data) => {
       if (data.pendingOffer && views.offering.hidden === false) {
         const el = document.getElementById('offer-text');
@@ -239,10 +248,23 @@ const pollInterval = setInterval(() => {
       if (data.connectionState === 'connected') {
         showView('connected');
         setStatus('', false);
-        clearInterval(pollInterval);
       }
       if (data.connectionState === 'failed' && views.error.hidden) {
         showError(data.connectionError);
+      }
+      // Update sync-paused state when connected
+      if (data.connectionState === 'connected') {
+        const pausedEl = document.getElementById('sync-paused');
+        const pausedText = document.getElementById('sync-paused-text');
+        const connText = document.getElementById('connected-text');
+        if (data.urlMatch === false && data.peerTitle) {
+          pausedEl.hidden = false;
+          pausedText.textContent = 'Sync paused — Partner is on: ' + data.peerTitle;
+          connText.textContent = 'Connected';
+        } else {
+          pausedEl.hidden = true;
+          connText.textContent = 'Connected — videos are syncing';
+        }
       }
     }
   );
