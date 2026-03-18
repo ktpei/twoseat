@@ -154,7 +154,7 @@ chrome.runtime.onMessage.addListener((message, sender) => {
       break;
 
     case TWOSEAT.MSG.VIDEO_FOUND:
-      if (sender.tab) {
+      if (sender.tab && sender.tab.active) {
         chrome.storage.session.set({
           hasVideo: true,
           tabId: sender.tab.id,
