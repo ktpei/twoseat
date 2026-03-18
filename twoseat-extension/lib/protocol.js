@@ -36,6 +36,7 @@ const TWOSEAT = {
     SEEK: 'SEEK',
     SYNC: 'SYNC',
     URL_INFO: 'URL_INFO',
+    NAV: 'NAV',
   },
 
   // Drift correction thresholds (in seconds)
