@@ -158,6 +158,21 @@ document.getElementById('answer-input').addEventListener('input', () => {
   document.getElementById('answer-input').classList.remove('invalid');
 });
 
+// Back buttons
+function goBack() {
+  clearSignalingState();
+  showView('disconnected');
+  setStatus('', false);
+  // Reset text fields
+  document.getElementById('offer-text').value = '';
+  document.getElementById('answer-input').value = '';
+  document.getElementById('offer-input').value = '';
+  document.getElementById('answer-text').value = '';
+  document.getElementById('answer-section').hidden = true;
+}
+document.getElementById('btn-back-offer').addEventListener('click', goBack);
+document.getElementById('btn-back-answer').addEventListener('click', goBack);
+
 // Copy buttons
 document.getElementById('btn-copy-offer').addEventListener('click', () => {
   navigator.clipboard.writeText(document.getElementById('offer-text').value);

@@ -169,6 +169,20 @@ p {
   padding: 0 0 8px;
 }
 
+.btn-back {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 12px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.btn-back:hover {
+  color: #444;
+  background: transparent;
+}
+
 .toggle-row {
   display: flex;
   align-items: center;
