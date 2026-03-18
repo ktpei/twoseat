@@ -17,6 +17,7 @@
 
   <!-- Offering (User A) -->
   <div id="view-offering" hidden>
+    <button id="btn-back-offer" class="btn-back">&larr; Back</button>
     <div class="step">
       <span class="step-label">Step 1 of 2</span>
       <span class="step-desc">Send this code to your partner</span>
@@ -31,11 +32,11 @@
     <textarea id="answer-input" placeholder="Paste response here..."></textarea>
     <div id="answer-input-error" class="validation-error" hidden></div>
     <button id="btn-set-answer">Connect</button>
-    <button id="btn-back-offer" class="btn-back">Back</button>
   </div>
 
   <!-- Answering (User B) -->
   <div id="view-answering" hidden>
+    <button id="btn-back-answer" class="btn-back">&larr; Back</button>
     <div class="step">
       <span class="step-label">Step 1 of 2</span>
       <span class="step-desc">Paste the code from your partner</span>
@@ -43,7 +44,6 @@
     <textarea id="offer-input" placeholder="Paste room code here..."></textarea>
     <div id="offer-input-error" class="validation-error" hidden></div>
     <button id="btn-accept-offer">Generate Response</button>
-    <button id="btn-back-answer" class="btn-back">Back</button>
     <div id="answer-section" hidden>
       <hr>
       <div class="step">
