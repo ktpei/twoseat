@@ -123,9 +123,9 @@ async function acceptOffer(encodedSdp) {
 }
 
 async function setAnswer(encodedSdp) {
-  if (!pc) {
-    console.error('[TwoSeat] No peer connection — cannot set answer');
-    return;
+  if (!pc || pc.signalingState !== 'have-local-offer') {
+    console.error('[TwoSeat] PC not ready for answer, state:', pc ? pc.signalingState : 'null');
+    throw new Error('Room expired — please create a new room and try again');
   }
   console.log('[TwoSeat] Setting answer');
   const answer = JSON.parse(atob(encodedSdp));

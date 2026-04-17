@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>TwoSeat — UI Export</title>
+  <style>
+    /* ---- Layout wrapper ---- */
+    body {
+      margin: 0;
+      padding: 40px;
+      background: #d0d0d0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px;
+      align-items: flex-start;
+    }
+    .frame {
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    }
+    .frame-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    /* ---- Popup styles (verbatim from popup.css) ---- */
+    .popup * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    .popup {
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      padding: 16px;
+      color: #1a1a1a;
+    }
+    .popup h1 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    .popup .video-info {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .popup .video-info.clickable {
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+    }
+    .popup .video-info.clickable:hover { color: #555; }
+    .popup .peer-info {
+      font-size: 11px;
+      margin-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .popup .peer-match { color: #2d7d46; }
+    .popup .peer-mismatch { color: #c44; }
+    .popup .status {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 12px;
+      min-height: 16px;
+    }
+    .popup .spinner {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border: 2px solid #ccc;
+      border-top-color: #666;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .popup button {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #f5f5f5;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .popup button:hover { background: #e8e8e8; }
+    .popup button.confirm {
+      background: #fee;
+      border-color: #c44;
+      color: #c44;
+    }
+    .popup textarea {
+      display: block;
+      width: 100%;
+      height: 72px;
+      padding: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 11px;
+      resize: vertical;
+      word-break: break-all;
+    }
+    .popup textarea[readonly] { background: #f9f9f9; color: #444; }
+    .popup textarea.invalid { border-color: #c44; }
+    .popup hr {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 12px 0;
+    }
+    .popup p { margin-bottom: 6px; }
+    .popup .step { margin-bottom: 8px; }
+    .popup .step-label {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #fff;
+      background: #555;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-right: 6px;
+    }
+    .popup .step-desc { font-size: 13px; color: #333; }
+    .popup .validation-error {
+      font-size: 11px;
+      color: #c44;
+      margin: -4px 0 8px;
+    }
+    .popup .error-msg {
+      text-align: center;
+      padding: 8px 0 12px;
+      color: #c44;
+      font-size: 13px;
+    }
+    .popup .connected-msg {
+      text-align: center;
+      font-weight: 600;
+      padding: 12px 0;
+      color: #2d7d46;
+    }
+    .popup .sync-paused-msg {
+      text-align: center;
+      font-size: 11px;
+      color: #c44;
+      padding: 0 0 8px;
+    }
+    .popup .btn-back {
+      background: transparent;
+      border: none;
+      color: #888;
+      font-size: 12px;
+      padding: 2px 0 6px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      text-align: left;
+      width: auto;
+      display: inline-block;
+    }
+    .popup .btn-back:hover { color: #444; background: transparent; }
+    .popup .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .popup .toggle-row input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="grid">
+
+    <!-- 1. Disconnected -->
+    <div>
+      <div class="frame-label">1 — Disconnected</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info clickable">Now watching: The Grand Budapest Hotel (2014)</div>
+          <div class="status">Not connected</div>
+          <button>Create Room</button>
+          <button>Join Room</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Disconnected — no video -->
+    <div>
+      <div class="frame-label">2 — Disconnected (no video)</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info">No video detected on this tab</div>
+          <div class="status">Not connected</div>
+          <button>Create Room</button>
+          <button>Join Room</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Offering — step 1 (generating) -->
+    <div>
+      <div class="frame-label">3 — Offering (generating code)</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info clickable">Now watching: The Grand Budapest Hotel (2014)</div>
+          <div class="status"><span class="spinner"></span>Generating room code…</div>
+          <button class="btn-back">← Back</button>
+          <div class="step">
+            <span class="step-label">Step 1 of 2</span>
+            <span class="step-desc">Send this code to your partner</span>
+          </div>
+          <textarea readonly placeholder="Generating…"></textarea>
+          <button>Copy</button>
+          <hr>
+          <div class="step">
+            <span class="step-label">Step 2 of 2</span>
+            <span class="step-desc">Paste their response</span>
+          </div>
+          <textarea placeholder="Paste response here…"></textarea>
+          <button>Connect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Offering — step 1 (code ready) -->
+    <div>
+      <div class="frame-label">4 — Offering (code ready)</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info clickable">Now watching: The Grand Budapest Hotel (2014)</div>
+          <div class="status">Share your code with your partner</div>
+          <button class="btn-back">← Back</button>
+          <div class="step">
+            <span class="step-label">Step 1 of 2</span>
+            <span class="step-desc">Send this code to your partner</span>
+          </div>
+          <textarea readonly>eyJ0eXBlIjoib2ZmZXIiLCJzZGsiOnsidHlwZSI6Im9mZmVyIiwic2RwIjoidjA9XHJcbm89...</textarea>
+          <button>Copy</button>
+          <hr>
+          <div class="step">
+            <span class="step-label">Step 2 of 2</span>
+            <span class="step-desc">Paste their response</span>
+          </div>
+          <textarea placeholder="Paste response here…"></textarea>
+          <button>Connect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Offering — step 2 validation error -->
+    <div>
+      <div class="frame-label">5 — Offering (validation error)</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info clickable">Now watching: The Grand Budapest Hotel (2014)</div>
+          <div class="status">Check the pasted code</div>
+          <button class="btn-back">← Back</button>
+          <div class="step">
+            <span class="step-label">Step 1 of 2</span>
+            <span class="step-desc">Send this code to your partner</span>
+          </div>
+          <textarea readonly>eyJ0eXBlIjoib2ZmZXIiLCJzZGsiOnsidHlwZSI6Im9mZmVyIiwic2RwIjoidjA9XHJcbm89...</textarea>
+          <button>Copy</button>
+          <hr>
+          <div class="step">
+            <span class="step-label">Step 2 of 2</span>
+            <span class="step-desc">Paste their response</span>
+          </div>
+          <textarea class="invalid">not-a-valid-code-xyz</textarea>
+          <div class="validation-error">Invalid response code. Make sure you copied it in full.</div>
+          <button>Connect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Answering — step 1 -->
+    <div>
+      <div class="frame-label">6 — Answering (step 1)</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info clickable">Now watching: The Grand Budapest Hotel (2014)</div>
+          <div class="status">Paste your partner's room code</div>
+          <button class="btn-back">← Back</button>
+          <div class="step">
+            <span class="step-label">Step 1 of 2</span>
+            <span class="step-desc">Paste the code from your partner</span>
+          </div>
+          <textarea placeholder="Paste room code here…"></textarea>
+          <button>Generate Response</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Answering — step 2 (response ready) -->
+    <div>
+      <div class="frame-label">7 — Answering (response ready)</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info clickable">Now watching: The Grand Budapest Hotel (2014)</div>
+          <div class="status">Send your response back to your partner</div>
+          <button class="btn-back">← Back</button>
+          <div class="step">
+            <span class="step-label">Step 1 of 2</span>
+            <span class="step-desc">Paste the code from your partner</span>
+          </div>
+          <textarea>eyJ0eXBlIjoib2ZmZXIiLCJzZGsiOnsidHlwZSI6Im9mZmVyIiwic2RwIjoidjA9XHJcbm89...</textarea>
+          <button>Generate Response</button>
+          <hr>
+          <div class="step">
+            <span class="step-label">Step 2 of 2</span>
+            <span class="step-desc">Send this back to your partner</span>
+          </div>
+          <textarea readonly>eyJ0eXBlIjoiYW5zd2VyIiwic2RwIjoidjA9XHJcbm89LSAxNzQyMzM4NTY3IDAgSU4gSVA0IDEyN...</textarea>
+          <button>Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. Connected — syncing -->
+    <div>
+      <div class="frame-label">8 — Connected (syncing)</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info clickable">Now watching: The Grand Budapest Hotel (2014)</div>
+          <div class="peer-info peer-match">Partner: The Grand Budapest Hotel (2014) ✓ Same video</div>
+          <div class="status">Connected</div>
+          <p class="connected-msg">Connected — videos are syncing</p>
+          <label class="toggle-row">
+            <input type="checkbox" checked>
+            <span>Auto-follow partner</span>
+          </label>
+          <button>Disconnect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. Connected — sync paused (different video) -->
+    <div>
+      <div class="frame-label">9 — Connected (sync paused)</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info clickable">Now watching: The Grand Budapest Hotel (2014)</div>
+          <div class="peer-info peer-mismatch">Partner: Asteroid City (2023) ✗ Different video</div>
+          <div class="status">Connected</div>
+          <p class="connected-msg">Connected — videos are syncing</p>
+          <div>
+            <p class="sync-paused-msg">Sync paused — you and your partner are on different videos</p>
+          </div>
+          <label class="toggle-row">
+            <input type="checkbox">
+            <span>Auto-follow partner</span>
+          </label>
+          <button>Disconnect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. Connected — disconnect confirm -->
+    <div>
+      <div class="frame-label">10 — Connected (disconnect confirm)</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info clickable">Now watching: The Grand Budapest Hotel (2014)</div>
+          <div class="peer-info peer-match">Partner: The Grand Budapest Hotel (2014) ✓ Same video</div>
+          <div class="status">Connected</div>
+          <p class="connected-msg">Connected — videos are syncing</p>
+          <label class="toggle-row">
+            <input type="checkbox" checked>
+            <span>Auto-follow partner</span>
+          </label>
+          <button class="confirm">Click again to disconnect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 11. Error -->
+    <div>
+      <div class="frame-label">11 — Error</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info">No video detected on this tab</div>
+          <div class="status">Connection failed</div>
+          <p class="error-msg">Connection failed. The room code may have expired or your partner closed the tab.</p>
+          <button>Try Again</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12. Connecting (in progress) -->
+    <div>
+      <div class="frame-label">12 — Connecting (in progress)</div>
+      <div class="frame">
+        <div class="popup">
+          <h1>TwoSeat</h1>
+          <div class="video-info clickable">Now watching: The Grand Budapest Hotel (2014)</div>
+          <div class="status"><span class="spinner"></span>Connecting to partner…</div>
+          <button class="btn-back">← Back</button>
+          <div class="step">
+            <span class="step-label">Step 2 of 2</span>
+            <span class="step-desc">Paste their response</span>
+          </div>
+          <textarea>eyJ0eXBlIjoiYW5zd2VyIiwic2RwIjoidjA9XHJcbm89...</textarea>
+          <button>Connect</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

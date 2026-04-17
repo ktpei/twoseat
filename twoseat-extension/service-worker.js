@@ -154,11 +154,16 @@ chrome.runtime.onMessage.addListener((message, sender) => {
       break;
 
     case TWOSEAT.MSG.VIDEO_FOUND:
-      if (sender.tab && sender.tab.active) {
+      if (sender.tab) {
         chrome.storage.session.set({
           hasVideo: true,
           tabId: sender.tab.id,
           videoTitle: message.title || 'Unknown video',
+        });
+        chrome.storage.session.get('connectionState', (data) => {
+          if (data.connectionState === 'connected') {
+            chrome.tabs.sendMessage(sender.tab.id, { type: TWOSEAT.MSG.SYNC_TICK, enabled: true });
+          }
         });
       }
       break;

@@ -26,6 +26,17 @@ h1 {
   text-overflow: ellipsis;
 }
 
+#btn-jump {
+  width: auto;
+  display: inline-block;
+  padding: 2px 8px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: #555;
+  background: #f0f0f0;
+  border-color: #ddd;
+}
+
 #peer-info {
   font-size: 11px;
   margin-bottom: 8px;

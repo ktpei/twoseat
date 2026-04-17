@@ -1,5 +1,9 @@
+if (window.__twoseatLoaded) { /* already injected */ } else {
+window.__twoseatLoaded = true;
+
 let video = null;
 let suppressCount = 0;
+let isBuffering = false;
 let syncInterval = null;
 let indicatorEl = null;
 let indicatorTimeout = null;
@@ -43,8 +47,17 @@ function showIndicator(text, bg, duration) {
 }
 
 // --- Presence dot ---
+function injectSyncStyles() {
+  if (document.getElementById('twoseat-sync-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'twoseat-sync-styles';
+  style.textContent = '@keyframes twoseat-pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.75); opacity: 0.6; } 100% { transform: scale(1); opacity: 1; } }';
+  document.head.appendChild(style);
+}
+
 function showPresenceDot() {
   if (presenceDot) return;
+  injectSyncStyles();
   presenceDot = document.createElement('div');
   presenceDot.id = 'twoseat-presence';
   presenceDot.style.cssText = [
@@ -58,8 +71,25 @@ function showPresenceDot() {
     'z-index: 2147483647',
     'pointer-events: none',
     'transition: background 0.3s',
+    'transform-origin: center',
+    'will-change: transform',
   ].join(';');
   document.body.appendChild(presenceDot);
+}
+
+function updatePresenceDot(drift) {
+  if (!presenceDot) return;
+  const absDrift = Math.abs(drift);
+  if (absDrift > TWOSEAT.DRIFT.JUMP_THRESHOLD) {
+    presenceDot.style.background = '#EF4444';
+  } else if (absDrift > TWOSEAT.DRIFT.ADJUST_THRESHOLD) {
+    presenceDot.style.background = '#F59E0B';
+  } else {
+    presenceDot.style.background = '#22C55E';
+  }
+  presenceDot.style.animation = 'none';
+  presenceDot.offsetHeight; // force reflow to retrigger animation
+  presenceDot.style.animation = 'twoseat-pulse 0.4s ease-out';
 }
 
 function hidePresenceDot() {
@@ -138,7 +168,10 @@ function removeFollowBanner() {
 function findVideo() {
   const videos = Array.from(document.querySelectorAll('video'));
   if (videos.length === 0) return null;
-  return videos.reduce((best, v) => {
+  // Prefer a video that is actively playing; fall back to largest by area
+  const playing = videos.filter(v => !v.paused && !v.ended && v.readyState > 0);
+  const candidates = playing.length > 0 ? playing : videos;
+  return candidates.reduce((best, v) => {
     const area = v.clientWidth * v.clientHeight;
     const bestArea = best.clientWidth * best.clientHeight;
     return area > bestArea ? v : best;
@@ -174,12 +207,21 @@ function attachListeners() {
 
   video.addEventListener('pause', () => {
     if (suppressCount > 0) return;
+    if (isBuffering) return;
     sendVideoEvent(TWOSEAT.ACTION.PAUSE);
   });
 
   video.addEventListener('seeking', () => {
     if (suppressCount > 0) return;
     sendVideoEvent(TWOSEAT.ACTION.SEEK, { targetTime: video.currentTime });
+  });
+
+  video.addEventListener('waiting', () => {
+    isBuffering = true;
+  });
+
+  video.addEventListener('playing', () => {
+    isBuffering = false;
   });
 }
 
@@ -236,6 +278,7 @@ function handleVideoCommand(control) {
         } else {
           video.playbackRate = 1.0;
         }
+        updatePresenceDot(drift);
         break;
       }
     }
@@ -253,8 +296,8 @@ function startSyncTicker() {
   syncTickCount = 0;
   syncInterval = setInterval(() => {
     syncTickCount++;
-    // Re-send URL info every 5 ticks (5 seconds) as fallback
-    if (syncTickCount % 5 === 0) {
+    // Re-send URL info every 2 ticks (2 seconds) as fallback
+    if (syncTickCount % 2 === 0) {
       sendUrlInfo();
     }
     if (suppressCount === 0 && video && !video.paused && urlMatched) {
@@ -309,13 +352,25 @@ function handleUrlInfo(control) {
   } catch (e) {}
 
   if (!match) {
+    setPresenceColor('#888');
     showIndicator('Sync paused — different video', '#EAB308', 4000);
   } else {
+    setPresenceColor('#22C55E');
     showIndicator('Syncing', '#22C55E', 2000);
   }
 }
 
 function handleNav(control) {
+  // Update popup immediately with partner's new location
+  try {
+    chrome.runtime.sendMessage({
+      type: 'twoseat:peer-url',
+      peerUrl: control.url,
+      peerTitle: control.pageTitle,
+      urlMatch: false,
+    });
+  } catch (e) {}
+
   // Check if auto-follow is enabled
   try {
     chrome.storage.session.get('autoFollow', (data) => {
@@ -356,6 +411,7 @@ chrome.runtime.onMessage.addListener((message) => {
     case TWOSEAT.MSG.DISCONNECT:
       isConnected = false;
       urlMatched = true;
+      isBuffering = false;
       stopSyncTicker();
       if (video) video.playbackRate = 1.0;
       setPresenceColor('#888');
@@ -444,3 +500,4 @@ document.addEventListener('yt-navigate-finish', () => {
 });
 
 init();
+} // end __twoseatLoaded guard

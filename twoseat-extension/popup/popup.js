@@ -9,9 +9,22 @@ const statusEl = document.getElementById('status');
 const videoInfoEl = document.getElementById('video-info');
 
 // Show what video we're listening to + peer match status
-chrome.storage.session.get(['hasVideo', 'videoTitle', 'peerTitle', 'urlMatch', 'connectionState'], (data) => {
+chrome.storage.session.get(['hasVideo', 'videoTitle', 'peerTitle', 'urlMatch', 'connectionState', 'tabId'], (data) => {
   if (data.hasVideo && data.videoTitle) {
     videoInfoEl.innerHTML = 'Listening to: ' + data.videoTitle;
+    if (data.tabId) {
+      const jumpBtn = document.createElement('button');
+      jumpBtn.id = 'btn-jump';
+      jumpBtn.textContent = 'Go to tab';
+      jumpBtn.addEventListener('click', () => {
+        chrome.tabs.get(data.tabId, (tab) => {
+          chrome.tabs.update(data.tabId, { active: true });
+          chrome.windows.update(tab.windowId, { focused: true });
+          window.close();
+        });
+      });
+      videoInfoEl.after(jumpBtn);
+    }
     if (data.connectionState === 'connected' && data.peerTitle != null) {
       const matchEl = document.createElement('div');
       matchEl.id = 'peer-info';
