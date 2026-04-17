@@ -1,4 +1,4 @@
-# TwoSeat
+# <img src="twoseat-extension/icons/icon48.png" width="32" height="32" alt="TwoSeat logo"> TwoSeat
 
 A Chrome extension for syncing video playback between two users. Uses WebRTC DataChannels for direct peer-to-peer communication.
 
